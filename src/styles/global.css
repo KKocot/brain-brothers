@@ -149,21 +149,15 @@
   }
 }
 
-@keyframes bb-drift-a {
+/* 644px = LCM(28, 46): the only drift distance that loops seamlessly for both
+   dot grids at once. 920s keeps the original 0.7px/s. translateZ(0) survives
+   Lightning CSS minification, plain translate3d(x, y, 0) does not. */
+@keyframes bb-drift {
   from {
-    transform: translate(0, 0);
+    transform: translate(0, 0) translateZ(0);
   }
   to {
-    transform: translate(28px, 28px);
-  }
-}
-
-@keyframes bb-drift-b {
-  from {
-    transform: translate(0, 0);
-  }
-  to {
-    transform: translate(-46px, 46px);
+    transform: translate(644px, 644px) translateZ(0);
   }
 }
 
@@ -201,28 +195,38 @@
     inset: 0;
     overflow: hidden;
     pointer-events: none;
-    -webkit-mask-image: radial-gradient(ellipse at 70% 50%, black 20%, transparent 75%);
-    mask-image: radial-gradient(ellipse at 70% 50%, black 20%, transparent 75%);
   }
 
   .bb-dots::before,
   .bb-dots::after {
     content: "";
     position: absolute;
-    inset: -20%;
-    will-change: transform;
   }
 
+  /* Both grids share one composited layer; two of them cost ~24% more CPU. */
   .bb-dots::before {
-    background-image: radial-gradient(circle, var(--color-dot-dense) 1px, transparent 1.5px);
-    background-size: 28px 28px;
-    animation: bb-drift-a 40s linear infinite;
+    /* Only the drift distance has to bleed past the clip; a larger inset just
+       grows the composited texture. */
+    inset: -48px;
+    background-image:
+      radial-gradient(circle, var(--color-dot-sparse) 1px, transparent 1.5px),
+      radial-gradient(circle, var(--color-dot-dense) 1px, transparent 1.5px);
+    background-size:
+      46px 46px,
+      28px 28px;
+    /* translateZ(0) + backface-visibility keep this on its own compositing
+       layer; without it WebKit freezes the drift animation. */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: transform;
+    animation: bb-drift 920s linear infinite;
   }
 
+  /* Complement of the old mask-image on .bb-dots. Over the flat --color-bg
+     backdrop it is mathematically identical, but far cheaper to composite. */
   .bb-dots::after {
-    background-image: radial-gradient(circle, var(--color-dot-sparse) 1px, transparent 1.5px);
-    background-size: 46px 46px;
-    animation: bb-drift-b 40s linear infinite;
+    inset: 0;
+    background-image: radial-gradient(ellipse at 70% 50%, transparent 20%, var(--color-bg) 75%);
   }
 
   .bb-logo {
@@ -251,8 +255,7 @@
     scroll-behavior: auto;
   }
 
-  .bb-dots::before,
-  .bb-dots::after {
+  .bb-dots::before {
     animation: none;
     will-change: auto;
   }
