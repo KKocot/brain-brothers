@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #08090b;
+  --color-surface: #0c0e11;
+  --color-border: #1b1e23;
+
+  --color-text: #e8eaed;
+  --color-muted: #9ba3ae;
+  --color-dim: #6b7480;
+
+  --color-accent: #c8f24e;
+  --color-accent-hover: #e4ffa3;
+  --color-accent-dark: #3a4230;
+
+  --font-sans: "Space Grotesk", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-bg text-text font-sans antialiased;
+}
+
+::selection {
+  @apply bg-accent text-bg;
+}
+
+a {
+  @apply text-accent;
+}
+
+a:hover {
+  @apply text-accent-hover;
+}
