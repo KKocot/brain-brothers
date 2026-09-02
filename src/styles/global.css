@@ -7,32 +7,272 @@
 
   --color-text: #e8eaed;
   --color-muted: #9ba3ae;
-  --color-dim: #6b7480;
+  --color-dim: #6f7985;
 
   --color-accent: #c8f24e;
   --color-accent-hover: #e4ffa3;
   --color-accent-dark: #3a4230;
 
+  --color-dot-dense: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  --color-dot-sparse: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  --color-glow: color-mix(in srgb, var(--color-accent) 8%, transparent);
+
   --font-sans: "Space Grotesk", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
+
+  --text-display: clamp(2.25rem, 6.4vw, 3.75rem);
+  --text-display--line-height: 1.06;
+  --text-display--letter-spacing: -0.035em;
+  --text-display--font-weight: 700;
+
+  --text-heading: clamp(1.75rem, 4.4vw, 2.125rem);
+  --text-heading--line-height: 1.15;
+  --text-heading--letter-spacing: -0.025em;
+  --text-heading--font-weight: 700;
+
+  --text-lead: clamp(1.0625rem, 1.6vw, 1.125rem);
+  --text-lead--line-height: 1.6;
+
+  --text-services: 0.9375rem;
+  --text-services--line-height: 1.9;
+
+  --text-contact: 1.03125rem;
+  --text-contact--line-height: 1.5;
+
+  --text-label: 0.71875rem;
+  --text-label--line-height: 1.2;
+  --text-label--letter-spacing: 0.1em;
+
+  --text-nav: 0.90625rem;
+  --text-nav--font-weight: 500;
+
+  --text-wordmark: 0.9375rem;
+  --text-wordmark--letter-spacing: 0.02em;
+  --text-wordmark--font-weight: 700;
+
+  --text-footer: 0.875rem;
+  --text-footer--line-height: 1.4;
+
+  --container-shell: 67.5rem;
+  --container-lead: 40ch;
+  --container-orb: 22rem;
+
+  --spacing-gutter: clamp(1.25rem, 4vw, 2.5rem);
+  --spacing-header-y: clamp(1.5rem, 3vw, 2.125rem);
+  --spacing-hero-top: clamp(3rem, 8vw, 5rem);
+  --spacing-hero-bottom: clamp(3.5rem, 10vw, 6.875rem);
+  --spacing-section-y: clamp(3.5rem, 9vw, 5.5rem);
+  --spacing-footer-y: clamp(1.5rem, 2vw, 1.625rem);
+  --spacing-hero-gap: clamp(2.5rem, 6vw, 4rem);
+  --spacing-contact-gap: clamp(2rem, 5vw, 3.5rem);
+
+  --shadow-orb: 0 0 0 1px var(--color-border), 0 0 7.5rem var(--color-glow);
 }
 
-html {
-  scroll-behavior: smooth;
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-body {
-  @apply bg-bg text-text font-sans antialiased;
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-::selection {
-  @apply bg-accent text-bg;
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-mono-400-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-a {
-  @apply text-accent;
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-mono-400-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-a:hover {
-  @apply text-accent-hover;
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-mono-500-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-mono-500-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-bg text-text font-sans antialiased;
+  }
+
+  ::selection {
+    @apply bg-accent text-bg;
+  }
+
+  a {
+    @apply text-accent no-underline;
+  }
+
+  a:hover {
+    @apply text-accent-hover;
+  }
+
+  a:focus-visible {
+    @apply outline-accent rounded-xs outline-2 outline-offset-4;
+  }
+}
+
+@keyframes bb-drift-a {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(28px, 28px);
+  }
+}
+
+@keyframes bb-drift-b {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(-46px, 46px);
+  }
+}
+
+@keyframes bb-blink-a {
+  0%,
+  45% {
+    background-color: var(--color-accent);
+  }
+  50%,
+  95% {
+    background-color: var(--color-accent-dark);
+  }
+  100% {
+    background-color: var(--color-accent);
+  }
+}
+
+@keyframes bb-blink-b {
+  0%,
+  45% {
+    background-color: var(--color-accent-dark);
+  }
+  50%,
+  95% {
+    background-color: var(--color-accent);
+  }
+  100% {
+    background-color: var(--color-accent-dark);
+  }
+}
+
+@layer components {
+  .bb-dots {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    -webkit-mask-image: radial-gradient(ellipse at 70% 50%, black 20%, transparent 75%);
+    mask-image: radial-gradient(ellipse at 70% 50%, black 20%, transparent 75%);
+  }
+
+  .bb-dots::before,
+  .bb-dots::after {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    will-change: transform;
+  }
+
+  .bb-dots::before {
+    background-image: radial-gradient(circle, var(--color-dot-dense) 1px, transparent 1.5px);
+    background-size: 28px 28px;
+    animation: bb-drift-a 40s linear infinite;
+  }
+
+  .bb-dots::after {
+    background-image: radial-gradient(circle, var(--color-dot-sparse) 1px, transparent 1.5px);
+    background-size: 46px 46px;
+    animation: bb-drift-b 40s linear infinite;
+  }
+
+  .bb-logo {
+    display: flex;
+    gap: 0.1875rem;
+  }
+
+  .bb-logo-bar {
+    display: block;
+    width: 0.5625rem;
+    height: 1.25rem;
+    background-color: var(--color-accent-dark);
+  }
+
+  .bb-logo-bar--a {
+    animation: bb-blink-a 2.4s steps(1) infinite;
+  }
+
+  .bb-logo-bar--b {
+    animation: bb-blink-b 2.4s steps(1) infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .bb-dots::before,
+  .bb-dots::after {
+    animation: none;
+    will-change: auto;
+  }
+
+  .bb-logo-bar {
+    animation: none;
+  }
+
+  .bb-logo-bar--a {
+    background-color: var(--color-accent);
+  }
+
+  .bb-orb-video {
+    display: none;
+  }
+
+  /* no class hook on the orb wrapper; poster replaces the hidden video */
+  div:has(> .bb-orb-video) {
+    background-image: url("/orb-poster.jpg");
+    background-size: cover;
+    background-position: center;
+  }
 }
