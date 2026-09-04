@@ -209,6 +209,11 @@
     inset: 0;
     background-image: radial-gradient(ellipse at 70% 50%, transparent 20%, var(--color-bg) 75%);
   }
+  .bb-orb {
+    background-image: url("/orb-poster.jpg");
+    background-size: cover;
+    background-position: center;
+  }
 
   .bb-logo {
     display: flex;
