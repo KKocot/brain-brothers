@@ -14,50 +14,12 @@
       </p>
     </div>
 
-    <div class="bb-orb max-w-orb bg-surface shadow-orb relative mx-auto aspect-square w-full overflow-hidden rounded-full md:max-w-none">
-      <video
-        class="bb-orb-video absolute inset-0 h-full w-full object-cover"
-        poster="/orb-poster.jpg"
-        muted
-        loop
-        playsinline
-        preload="none"
-        aria-hidden="true"
-      >
-      </video>
+    <div class="max-w-orb bg-surface shadow-orb relative mx-auto aspect-square w-full overflow-hidden rounded-full md:max-w-none">
+      <div class="bb-orb absolute inset-0"></div>
     </div>
 
     <p class="text-services text-dim col-span-full mt-4 font-mono">
       Application security · Smart contracts · Load testing · Cloud infrastructure · Code review
     </p>
   </div>
-
-<script>
-  const video = document.querySelector<HTMLVideoElement>(".bb-orb-video");
-  const source = video?.dataset.src;
-
-  if (video && source) {
-    const device = navigator as Navigator & { deviceMemory?: number };
-    const weakCpu = typeof device.hardwareConcurrency === "number" && device.hardwareConcurrency <= 4;
-    const weakMemory = typeof device.deviceMemory === "number" && device.deviceMemory <= 4;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    if (!reducedMotion && !weakCpu && !weakMemory) {
-      video.src = source;
-      video.load();
-
-      const observer = new IntersectionObserver((entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            video.play().catch(() => {});
-          } else {
-            video.pause();
-          }
-        }
-      });
-
-      observer.observe(video);
-    }
-  }
-</script>
 </section>
