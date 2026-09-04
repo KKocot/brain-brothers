@@ -18,14 +18,12 @@
       <video
         class="bb-orb-video absolute inset-0 h-full w-full object-cover"
         poster="/orb-poster.jpg"
-        autoplay
         muted
         loop
         playsinline
-        preload="metadata"
+        preload="none"
         aria-hidden="true"
       >
-        <source src="/dots.mp4" type="video/mp4" media="(prefers-reduced-motion: no-preference)" />
       </video>
     </div>
 
@@ -33,4 +31,33 @@
       Application security · Smart contracts · Load testing · Cloud infrastructure · Code review
     </p>
   </div>
+
+<script>
+  const video = document.querySelector<HTMLVideoElement>(".bb-orb-video");
+  const source = video?.dataset.src;
+
+  if (video && source) {
+    const device = navigator as Navigator & { deviceMemory?: number };
+    const weakCpu = typeof device.hardwareConcurrency === "number" && device.hardwareConcurrency <= 4;
+    const weakMemory = typeof device.deviceMemory === "number" && device.deviceMemory <= 4;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!reducedMotion && !weakCpu && !weakMemory) {
+      video.src = source;
+      video.load();
+
+      const observer = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            video.play().catch(() => {});
+          } else {
+            video.pause();
+          }
+        }
+      });
+
+      observer.observe(video);
+    }
+  }
+</script>
 </section>
