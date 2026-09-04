@@ -16,6 +16,8 @@
   --color-dot-dense: color-mix(in srgb, var(--color-accent) 22%, transparent);
   --color-dot-sparse: color-mix(in srgb, var(--color-accent) 12%, transparent);
   --color-glow: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  --color-mesh-haze: #16262d;
+  --color-mesh-deep: #101a1f;
 
   --font-sans: "Space Grotesk", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
@@ -224,6 +226,32 @@
   .bb-dots::after {
     inset: 0;
     background-image: radial-gradient(ellipse at 70% 50%, transparent 20%, var(--color-bg) 75%);
+  }
+
+  /* The poster is the fallback for no-JS, reduced motion and the beat before
+     the script boots. It has the mesh baked in, so `is-live` has to swap it
+     out or the static strands show through the animated ones. */
+  .bb-mesh {
+    background-image: url("/orb-poster.jpg");
+    background-size: cover;
+    background-position: center;
+  }
+
+  .bb-mesh.is-live {
+    background-image: radial-gradient(
+      circle at 42% 38%,
+      var(--color-mesh-haze) 0%,
+      var(--color-mesh-deep) 45%,
+      var(--color-surface) 100%
+    );
+  }
+
+  .bb-mesh canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
   }
 
   .bb-logo {

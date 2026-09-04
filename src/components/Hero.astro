@@ -15,9 +15,11 @@
     </div>
 
     <div
-      class="max-w-orb bg-surface shadow-orb relative mx-auto aspect-square w-full overflow-hidden rounded-full md:max-w-none"
+      class="bb-mesh max-w-orb bg-surface shadow-orb relative mx-auto aspect-square w-full overflow-hidden rounded-full md:max-w-none"
       aria-hidden="true"
+      data-orb-mesh
     >
+      <canvas></canvas>
     </div>
 
     <p class="text-services text-dim col-span-full mt-4 font-mono">
@@ -25,3 +27,328 @@
     </p>
   </div>
 </section>
+
+<script>
+  const TAU = Math.PI * 2;
+  const PAD_RATIO = 0.06;
+  const MESH_NODES = 60;
+  const LINK_RATIO = 0.22;
+  const SPEED_MIN = 10;
+  const SPEED_MAX = 16;
+  const DUST_SPEED_MIN = 4;
+  const DUST_SPEED_MAX = 9;
+  const LEASH_RATIO = 0.11;
+  const LEASH_ACCEL = 9;
+  const LINE_ALPHA = 0.2;
+  const ALPHA_STEPS = 10;
+  const DPR_CAP = 1.5;
+  const RESIZE_DEBOUNCE = 120;
+  const GLOW_SPRITE = 64;
+
+  const host = document.querySelector<HTMLElement>("[data-orb-mesh]");
+  const canvas = host?.querySelector("canvas");
+  const ctx = canvas?.getContext?.("2d");
+
+  if (host && canvas && ctx && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const nav = navigator as Navigator & { deviceMemory?: number };
+    const weak = (nav.hardwareConcurrency || 8) <= 4 || (nav.deviceMemory || 8) <= 4;
+    const nodeCount = weak ? 38 : MESH_NODES;
+    const dustCount = weak ? 30 : 46;
+    const frameMs = 1000 / (weak ? 24 : 30);
+    // Reach grows as 1/sqrt(density) so the reduced mesh keeps the same average
+    // degree; at a fixed radius it falls apart into loose strands.
+    const linkRatio = LINK_RATIO * Math.sqrt(MESH_NODES / nodeCount);
+
+    const root = getComputedStyle(document.documentElement);
+    const token = (name: string, fallback: string) =>
+      root.getPropertyValue(name).trim() || fallback;
+    const nodeColor = token("--color-text", "#e8eaed");
+    const accentColor = token("--color-accent", "#c8f24e");
+    // Pale blue of the strands, sampled from the poster; the palette has no
+    // token for it because nothing else in the page uses this hue.
+    const lineColor = "#c3d9e4";
+
+    type Mote = {
+      x: number;
+      y: number;
+      hx: number;
+      hy: number;
+      vx: number;
+      vy: number;
+      speed: number;
+      r: number;
+      hub: boolean;
+      accent: boolean;
+    };
+
+    const nodes: Mote[] = [];
+    const dust: Mote[] = [];
+    let side = 0;
+    let pad = 0;
+    let link = 0;
+    let dpr = 0;
+    let last = 0;
+    let raf = 0;
+    let running = false;
+    let onScreen = false;
+    let resizeTimer = 0;
+
+    // One radial sprite built at boot, blitted per hub. A gradient per node per
+    // frame is the single most expensive thing a 2d context can be asked to do.
+    const glow = (() => {
+      const sprite = document.createElement("canvas");
+      sprite.width = sprite.height = GLOW_SPRITE;
+      const g = sprite.getContext("2d");
+      if (!g) return null;
+      const mid = GLOW_SPRITE / 2;
+      const grad = g.createRadialGradient(mid, mid, 0, mid, mid, mid);
+      grad.addColorStop(0, "rgba(255, 255, 255, 0.5)");
+      grad.addColorStop(0.35, "rgba(255, 255, 255, 0.14)");
+      grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+      g.fillStyle = grad;
+      g.fillRect(0, 0, GLOW_SPRITE, GLOW_SPRITE);
+      return sprite;
+    })();
+
+    function drift(min: number, max: number) {
+      const angle = Math.random() * TAU;
+      const speed = min + Math.random() * (max - min);
+      return { vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, speed };
+    }
+
+    function seed() {
+      // Jittered grid, not pure random: a Poisson scatter leaves bald patches
+      // that read as a bug on a disc this small.
+      const cols = Math.ceil(Math.sqrt(nodeCount));
+      const cells = Array.from({ length: cols * cols }, (_, i) => i);
+      for (let i = cells.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [cells[i], cells[j]] = [cells[j], cells[i]];
+      }
+
+      const span = side + pad * 2;
+      const cell = span / cols;
+      for (let i = 0; i < nodeCount; i++) {
+        const hub = i % 9 === 4;
+        const x = -pad + ((cells[i] % cols) + Math.random()) * cell;
+        const y = -pad + (Math.floor(cells[i] / cols) + Math.random()) * cell;
+        nodes.push({
+          x,
+          y,
+          hx: x,
+          hy: y,
+          ...drift(SPEED_MIN, SPEED_MAX),
+          r: hub ? 2 + Math.random() * 0.8 : 0.85 + Math.random() * 0.75,
+          hub,
+          accent: i % 17 === 8,
+        });
+      }
+
+      for (let i = 0; i < dustCount; i++) {
+        const x = -pad + Math.random() * span;
+        const y = -pad + Math.random() * span;
+        dust.push({
+          x,
+          y,
+          hx: x,
+          hy: y,
+          ...drift(DUST_SPEED_MIN, DUST_SPEED_MAX),
+          r: 0.4 + Math.random() * 0.6,
+          hub: false,
+          accent: i % 11 === 5,
+        });
+      }
+    }
+
+    // Free flight alone decays into Poisson clumps within ~20s and leaves half
+    // the disc bare. Each mote is leashed to its seed cell instead: inside the
+    // leash it flies straight, outside it arcs back. Mutual repulsion was tried
+    // first and packed everything into a ring against the walls.
+    function tether(dt: number) {
+      const leash = side * LEASH_RATIO;
+      for (const list of [nodes, dust]) {
+        for (const m of list) {
+          const dx = m.hx - m.x;
+          const dy = m.hy - m.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist <= leash) continue;
+          const pull = (LEASH_ACCEL * Math.min((dist - leash) / leash, 1) * dt) / dist;
+          m.vx += dx * pull;
+          m.vy += dy * pull;
+          // The pull only turns the mote; speed is pinned so the drift stays calm.
+          const mag = Math.hypot(m.vx, m.vy);
+          if (!mag) continue;
+          m.vx = (m.vx / mag) * m.speed;
+          m.vy = (m.vy / mag) * m.speed;
+        }
+      }
+    }
+
+    function step(dt: number) {
+      tether(dt);
+      const lo = -pad;
+      const hi = side + pad;
+      for (const list of [nodes, dust]) {
+        for (const m of list) {
+          m.x += m.vx * dt;
+          m.y += m.vy * dt;
+          // The field is wider than the disc, so every bounce lands out of sight.
+          if (m.x < lo) {
+            m.x = lo;
+            m.vx = -m.vx;
+          } else if (m.x > hi) {
+            m.x = hi;
+            m.vx = -m.vx;
+          }
+          if (m.y < lo) {
+            m.y = lo;
+            m.vy = -m.vy;
+          } else if (m.y > hi) {
+            m.y = hi;
+            m.vy = -m.vy;
+          }
+        }
+      }
+    }
+
+    function drawLinks() {
+      // One stroke per opacity bucket instead of one per pair: ~200 links
+      // collapse into 10 draw calls.
+      const buckets: Path2D[] = [];
+      for (let i = 0; i < ALPHA_STEPS; i++) buckets.push(new Path2D());
+
+      const linkSq = link * link;
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+          const b = nodes[j];
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          const distSq = dx * dx + dy * dy;
+          if (distSq >= linkSq) continue;
+          const closeness = 1 - Math.sqrt(distSq) / link;
+          const path = buckets[Math.min(ALPHA_STEPS - 1, (closeness * ALPHA_STEPS) | 0)];
+          path.moveTo(a.x, a.y);
+          path.lineTo(b.x, b.y);
+        }
+      }
+
+      ctx!.strokeStyle = lineColor;
+      ctx!.lineWidth = 0.9;
+      for (let i = 0; i < ALPHA_STEPS; i++) {
+        ctx!.globalAlpha = (LINE_ALPHA * (i + 1)) / ALPHA_STEPS;
+        ctx!.stroke(buckets[i]);
+      }
+    }
+
+    function arcInto(path: Path2D, m: Mote, radius: number) {
+      path.moveTo(m.x + radius, m.y);
+      path.arc(m.x, m.y, radius, 0, TAU);
+    }
+
+    function drawMotes() {
+      const plain = new Path2D();
+      const accent = new Path2D();
+      const faint = new Path2D();
+      const grit = new Path2D();
+
+      for (const n of nodes) arcInto(n.accent ? accent : plain, n, n.r);
+      for (let i = 0; i < dust.length; i++) {
+        const d = dust[i];
+        arcInto(d.accent ? accent : i % 2 ? faint : grit, d, d.r);
+      }
+
+      if (glow) {
+        ctx!.globalAlpha = 0.55;
+        for (const n of nodes) {
+          if (!n.hub) continue;
+          const reach = n.r * 5;
+          ctx!.drawImage(glow, n.x - reach, n.y - reach, reach * 2, reach * 2);
+        }
+      }
+
+      ctx!.fillStyle = nodeColor;
+      ctx!.globalAlpha = 0.2;
+      ctx!.fill(faint);
+      ctx!.globalAlpha = 0.5;
+      ctx!.fill(grit);
+      ctx!.globalAlpha = 0.85;
+      ctx!.fill(plain);
+      ctx!.fillStyle = accentColor;
+      ctx!.globalAlpha = 0.7;
+      ctx!.fill(accent);
+      ctx!.globalAlpha = 1;
+    }
+
+    function draw() {
+      ctx!.clearRect(0, 0, side, side);
+      drawLinks();
+      drawMotes();
+    }
+
+    function resize() {
+      const next = host!.clientWidth;
+      const nextDpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
+      if (!next || (next === side && nextDpr === dpr)) return;
+
+      const scale = side ? next / side : 0;
+      side = next;
+      dpr = nextDpr;
+      pad = side * PAD_RATIO;
+      link = side * linkRatio;
+      canvas!.width = Math.round(side * dpr);
+      canvas!.height = Math.round(side * dpr);
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      if (scale) {
+        for (const list of [nodes, dust]) {
+          for (const m of list) {
+            m.x *= scale;
+            m.y *= scale;
+            m.hx *= scale;
+            m.hy *= scale;
+          }
+        }
+        draw();
+      }
+    }
+
+    function frame(now: number) {
+      raf = requestAnimationFrame(frame);
+      if (last && now - last < frameMs - 1) return;
+      const dt = last ? Math.min((now - last) / 1000, 0.1) : 0;
+      last = now;
+      step(dt);
+      draw();
+    }
+
+    function sync() {
+      const shouldRun = onScreen && !document.hidden;
+      if (shouldRun === running) return;
+      running = shouldRun;
+      if (shouldRun) {
+        last = 0;
+        raf = requestAnimationFrame(frame);
+      } else {
+        cancelAnimationFrame(raf);
+      }
+    }
+
+    resize();
+    seed();
+    draw();
+    host.classList.add("is-live");
+
+    new IntersectionObserver((entries) => {
+      onScreen = entries[0].isIntersecting;
+      sync();
+    }).observe(host);
+
+    new ResizeObserver(() => {
+      clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(resize, RESIZE_DEBOUNCE);
+    }).observe(host);
+
+    document.addEventListener("visibilitychange", sync);
+  }
+</script>
