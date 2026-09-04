@@ -158,26 +158,6 @@
   }
 }
 
-/* `rotate` and `scale` are standalone properties, so the two orb animations
-   compose instead of overwriting one shared `transform`. */
-@keyframes bb-orb-spin {
-  from {
-    rotate: 0deg;
-  }
-  to {
-    rotate: 360deg;
-  }
-}
-
-@keyframes bb-orb-breathe {
-  from {
-    scale: 1.01;
-  }
-  to {
-    scale: 1.05;
-  }
-}
-
 @keyframes bb-blink-a {
   0%,
   45% {
@@ -246,19 +226,6 @@
     background-image: radial-gradient(ellipse at 70% 50%, transparent 20%, var(--color-bg) 75%);
   }
 
-  /* The poster sits on a child so it can rotate; a background alone cannot.
-     A square rotated about its centre always covers the inscribed circle, and
-     the 1.01 scale floor keeps sub-pixel rounding off the clipped edge. */
-  .bb-orb {
-    background-image: url("/orb-poster.jpg");
-    background-size: cover;
-    background-position: center;
-    scale: 1.01;
-    animation:
-      bb-orb-spin 280s linear infinite,
-      bb-orb-breathe 22s ease-in-out infinite alternate;
-  }
-
   .bb-logo {
     display: flex;
     gap: 0.1875rem;
@@ -288,10 +255,6 @@
   .bb-dots::before {
     animation: none;
     will-change: auto;
-  }
-
-  .bb-orb {
-    animation: none;
   }
 
   .bb-logo-bar {
