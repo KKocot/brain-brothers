@@ -146,6 +146,19 @@
   }
 }
 
+/* 644px = LCM(28, 46): the only drift distance that loops seamlessly for both
+   dot grids at once. 920s keeps the original 0.7px/s. translateZ(0) survives
+   Lightning CSS minification, plain translate3d(x, y, 0) does not. */
+@keyframes bb-drift {
+  from {
+    transform: translate(0, 0) translateZ(0);
+  }
+  to {
+    transform: translate(644px, 644px) translateZ(0);
+  }
+}
+
+
 @keyframes bb-blink-a {
   0%,
   45% {
@@ -192,7 +205,7 @@
   .bb-dots::before {
     /* Only the drift distance has to bleed past the clip; a larger inset just
        grows the composited texture. */
-    inset: 0;
+    inset: -48px;
     background-image:
       radial-gradient(circle, var(--color-dot-sparse) 1px, transparent 1.5px),
       radial-gradient(circle, var(--color-dot-dense) 1px, transparent 1.5px);
@@ -201,6 +214,10 @@
       28px 28px;
     /* translateZ(0) + backface-visibility keep this on its own compositing
        layer; without it WebKit freezes the drift animation. */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: transform;
+    animation: bb-drift 920s linear infinite;
   }
 
   /* Complement of the old mask-image on .bb-dots. Over the flat --color-bg
@@ -209,6 +226,10 @@
     inset: 0;
     background-image: radial-gradient(ellipse at 70% 50%, transparent 20%, var(--color-bg) 75%);
   }
+
+  /* The poster sits on a child so it can rotate; a background alone cannot.
+     A square rotated about its centre always covers the inscribed circle, and
+     the 1.01 scale floor keeps sub-pixel rounding off the clipped edge. */
   .bb-orb {
     background-image: url("/orb-poster.jpg");
     background-size: cover;
@@ -242,6 +263,12 @@
   }
 
   .bb-dots::before {
+    animation: none;
+    will-change: auto;
+  }
+
+  .bb-orb {
+    animation: none;
   }
 
   .bb-logo-bar {
@@ -250,16 +277,5 @@
 
   .bb-logo-bar--a {
     background-color: var(--color-accent);
-  }
-
-  .bb-orb-video {
-    display: none;
-  }
-
-  /* no class hook on the orb wrapper; poster replaces the hidden video */
-  div:has(> .bb-orb-video) {
-    background-image: url("/orb-poster.jpg");
-    background-size: cover;
-    background-position: center;
   }
 }
